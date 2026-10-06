@@ -291,6 +291,8 @@ h1 {
    ============================================= */
 .filters-bar {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 12px;
     margin-bottom: 20px;
     padding-bottom: 16px;
@@ -981,4 +983,8 @@ details[open] summary::after {
         padding: 8px 16px;
         font-size: 0.9rem;
     }
+}
+
+.custom-category-filters {
+    display: contents;
 }

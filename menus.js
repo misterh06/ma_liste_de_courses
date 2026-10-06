@@ -17,6 +17,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const menusCollection = collection(db, "menus");
+const menuCategoriesCollection = collection(db, "menu_categories");
 const shoppingListCollection = collection(db, "shopping_list");
 
 // --- Categories ---
@@ -24,6 +25,7 @@ const CATEGORIES = ["rapide", "Apéritif", "gourmet", "familiale", "menu de la s
 
 // --- State ---
 let menus = [];
+let customCategories = [];
 let shoppingListItems = [];
 let currentCategoryFilter = "all";
 let selectedStars = 1;
@@ -49,6 +51,10 @@ function init() {
     document.getElementById("btnCloseModal").addEventListener("click", closeModal);
     document.getElementById("btnCancel").addEventListener("click", closeModal);
     document.getElementById("btnResetMenus").addEventListener("click", resetMenus);
+    document.getElementById("btnAddCategory").addEventListener("click", openCategoryModal);
+    document.getElementById("btnCloseCategoryModal").addEventListener("click", closeCategoryModal);
+    document.getElementById("btnCancelCategory").addEventListener("click", closeCategoryModal);
+    document.querySelector("[data-close-category-modal]").addEventListener("click", closeCategoryModal);
     document.getElementById("btnAddArticle").addEventListener("click", addArticleToMenu);
     document.getElementById("btnConfirmAddToCart").addEventListener("click", confirmAddToCart);
 
@@ -80,6 +86,7 @@ function init() {
     });
 
     form.addEventListener("submit", handleFormSubmit);
+    document.getElementById("categoryForm").addEventListener("submit", handleCategorySubmit);
 
     // Auth State Listener
     onAuthStateChanged(auth, (user) => {
@@ -98,6 +105,7 @@ function init() {
 }
 
 let unsubscribeMenus = null;
+let unsubscribeCategories = null;
 let unsubscribeShoppingList = null;
 
 function startSync() {
@@ -113,6 +121,18 @@ function startSync() {
     }, (error) => {
         console.error("Error fetching menus:", error);
         loadingState.innerHTML = `<div style="color:var(--danger); text-align:center"><p><strong>Erreur de chargement</strong></p><p>${error.message}</p></div>`;
+    });
+
+    // Sync custom menu categories
+    if (unsubscribeCategories) unsubscribeCategories();
+    unsubscribeCategories = onSnapshot(query(menuCategoriesCollection), (snapshot) => {
+        customCategories = [...new Set(snapshot.docs
+            .map(d => d.data().name)
+            .filter(name => typeof name === "string" && name.trim())
+            .map(name => name.trim()))];
+        renderCategoryFilters();
+    }, (error) => {
+        console.error("Error fetching menu categories:", error);
     });
 
     // Sync Shopping List (for article selector)
@@ -224,6 +244,40 @@ function render() {
     });
 }
 
+function renderCategoryFilters() {
+    const container = document.getElementById("customCategoryFilters");
+    container.innerHTML = "";
+
+    customCategories.forEach(category => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "filter-tab";
+        button.dataset.category = category;
+        button.textContent = `${getCategoryEmoji(category)} ${category}`;
+        button.classList.toggle("active", currentCategoryFilter === category);
+        button.addEventListener("click", () => setCategoryFilter(category));
+        container.appendChild(button);
+    });
+
+    const categorySelect = document.getElementById("menuCategory");
+    const selectedCategory = categorySelect.value;
+    categorySelect.innerHTML = [
+        '<option value="rapide">🍳 Rapide</option>',
+        '<option value="Apéritif">🥂 Apéritif</option>',
+        '<option value="gourmet">🍷 Gourmet</option>',
+        '<option value="familiale">👨‍👩‍👧‍👦 Familiale</option>'
+    ].join("");
+    customCategories.forEach(category => {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = `${getCategoryEmoji(category)} ${category}`;
+        categorySelect.appendChild(option);
+    });
+    if ([...categorySelect.options].some(option => option.value === selectedCategory)) {
+        categorySelect.value = selectedCategory;
+    }
+}
+
 function getCategoryEmoji(category) {
     const emojis = {
         "rapide": "🍳",
@@ -292,8 +346,55 @@ function setCategoryFilter(category) {
     document.getElementById("filterGourmet").classList.toggle("active", category === "gourmet");
     document.getElementById("filterFamiliale").classList.toggle("active", category === "familiale");
     document.getElementById("filterSemaine").classList.toggle("active", category === "menu de la semaine");
+    document.querySelectorAll("#customCategoryFilters .filter-tab").forEach(button => {
+        button.classList.toggle("active", button.dataset.category === category);
+    });
 
     render();
+}
+
+function openCategoryModal() {
+    document.getElementById("categoryForm").reset();
+    document.getElementById("categoryError").classList.add("hidden");
+    document.getElementById("categoryModal").classList.remove("hidden");
+    document.getElementById("categoryName").focus();
+}
+
+function closeCategoryModal() {
+    document.getElementById("categoryModal").classList.add("hidden");
+}
+
+async function handleCategorySubmit(event) {
+    event.preventDefault();
+    const input = document.getElementById("categoryName");
+    const categoryName = input.value.trim();
+    const errorElement = document.getElementById("categoryError");
+    const saveButton = document.getElementById("btnSaveCategory");
+
+    if (!categoryName) return;
+
+    const existingNames = [...CATEGORIES, ...customCategories];
+    if (existingNames.some(name => name.toLocaleLowerCase() === categoryName.toLocaleLowerCase())) {
+        errorElement.textContent = "Cette catégorie existe déjà.";
+        errorElement.classList.remove("hidden");
+        return;
+    }
+
+    saveButton.disabled = true;
+    errorElement.classList.add("hidden");
+    try {
+        await addDoc(menuCategoriesCollection, { name: categoryName });
+        currentCategoryFilter = categoryName;
+        closeCategoryModal();
+        renderCategoryFilters();
+        setCategoryFilter(categoryName);
+    } catch (error) {
+        console.error("Error creating menu category:", error);
+        errorElement.textContent = "Impossible d'enregistrer la catégorie. Vérifiez vos droits d'accès à Firestore.";
+        errorElement.classList.remove("hidden");
+    } finally {
+        saveButton.disabled = false;
+    }
 }
 
 // --- Modal ---

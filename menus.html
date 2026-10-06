@@ -79,6 +79,11 @@
                 <button id="filterGourmet" class="filter-tab">🍷 Gourmet</button>
                 <button id="filterFamiliale" class="filter-tab">👨‍👩‍👧‍👦 Familiale</button>
                 <button id="filterSemaine" class="filter-tab">📅 Semaine</button>
+                <div id="customCategoryFilters" class="custom-category-filters"></div>
+                <button id="btnAddCategory" class="btn btn-secondary">
+                    <span class="material-symbols-rounded">add</span>
+                    <span>Nouvelle catégorie</span>
+                </button>
             </div>
 
             <div class="list-container">
@@ -154,6 +159,30 @@
                 <div class="form-actions">
                     <button type="button" id="btnCancel" class="btn btn-ghost">Annuler</button>
                     <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="categoryModal" class="modal hidden">
+        <div class="modal-backdrop" data-close-category-modal></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nouvelle catégorie</h2>
+                <button type="button" id="btnCloseCategoryModal" class="btn-icon" title="Fermer">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <form id="categoryForm">
+                <div class="form-group">
+                    <label for="categoryName">Nom de la catégorie</label>
+                    <input type="text" id="categoryName" maxlength="40" required placeholder="Ex : Végétarien">
+                </div>
+                <div id="categoryError" class="error-msg hidden" role="alert"></div>
+                <div class="form-actions">
+                    <button type="button" id="btnCancelCategory" class="btn btn-ghost">Annuler</button>
+                    <button type="submit" id="btnSaveCategory" class="btn btn-primary">Créer</button>
                 </div>
             </form>
         </div>
