@@ -199,7 +199,7 @@ function render() {
         menusList.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-secondary)">Aucun menu dans cette catégorie.</div>`;
         emptyState.classList.add("hidden");
         return;
-    } else if (menus.length === 0) {
+    } else if (menus.length === 0 && customCategories.length === 0) {
         emptyState.classList.remove("hidden");
         return;
     } else {
@@ -208,6 +208,11 @@ function render() {
 
     // Group by category
     const grouped = {};
+    customCategories.forEach(category => {
+        if (currentCategoryFilter === "all" || currentCategoryFilter === category) {
+            grouped[category] = [];
+        }
+    });
     filteredMenus.forEach(menu => {
         const cat = menu.category || "rapide";
         if (!grouped[cat]) grouped[cat] = [];
